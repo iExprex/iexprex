@@ -5,11 +5,15 @@ import { FaEye, FaEyeSlash, FaGithub } from "react-icons/fa";
 import { FaGoogle } from "react-icons/fa6";
 import {
   createUserWithEmailAndPassword,
+  GithubAuthProvider,
+  GoogleAuthProvider,
   signInWithEmailAndPassword,
+  signInWithPopup,
   updateProfile,
 } from "firebase/auth";
 import { auth, db } from "../../firebaseConfig";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 
 const initialState = {
@@ -18,10 +22,15 @@ const initialState = {
   password: "",
 };
 const Auth = () => {
+  const navigate = useNavigate();
   const [state, setState] = useState(initialState);
   const [visible, setVisible] = useState(false);
   const [signUp, setSignUp] = useState(false);
   const { username, email, password } = state;
+
+  const Provider = new GoogleAuthProvider();
+  const providerGit = new GithubAuthProvider();
+
   const handleChange = (e) => {
     setState({ ...state, [e.target.name]: e.target.value });
   };
@@ -43,7 +52,8 @@ const Auth = () => {
             const errCode = err.code;
             const errMsg = err.message;
             console.log({ errCode }, { errMsg });
-          });
+          }); 
+          navigate('/success');
       } else {
         if (email && password) {
           const { user } = signInWithEmailAndPassword(auth, email, password)
@@ -55,10 +65,49 @@ const Auth = () => {
               const errMsg = err.message;
               console.log({ errCode }, { errMsg });
             });
+            navigate('/iexprex-blog');
+
         }
       }
     }
   };
+
+  const handleGooglePop = async (e) => {
+    e.preventDefault();
+    signInWithPopup(auth, Provider).then((response) => {
+      setDoc(doc(db, "users", response.user.uid),{
+        email: response.user.email,
+        username: response.user.displayName,
+        userProfile: response.user.photoURL,
+        userId: response.user.uid,
+        timestamp: serverTimestamp()
+      })
+      navigate(`/just-a-moment/${response.user.uid}`);
+    }).catch((err) => {
+      alert(err.message);
+    })
+  }
+
+  //github
+  const handleGithubLogin = async (e) => {
+    e.preventDefault();
+    signInWithPopup(auth, providerGit).then((response) => {
+      setDoc(doc(db, "users", response.user.uid),{
+        email: response.user.email,
+        username: response.user.displayName,
+        userProfile: response.user.photoURL,
+        userId: response.user.uid,
+        timestamp: serverTimestamp()
+      })
+      navigate(`/just-a-moment/${response.user.uid}`);
+    }).catch((err) => {
+      alert(err.message);
+    })
+  }
+
+  //Forget Password handler
+
+
   return (
     <AuthPageContainerWrapper>
       <div className="head">
@@ -125,7 +174,7 @@ const Auth = () => {
               <span>Forgot password?</span>
             </div>
             <div className="input-form">
-              <button type="button">{signUp ? "Sign Up" : "Sign In"}</button>
+              <button type="submit">{signUp ? "Sign Up" : "Sign In"}</button>
             </div>
             <small
               onClick={() => {
@@ -138,10 +187,10 @@ const Auth = () => {
             </small>
           </div>
           <div className="sign-with">
-            <div className="with-box">
+            <div className="with-box" onClick={handleGithubLogin }>
               <FaGithub />
             </div>
-            <div className="with-box">
+            <div className="with-box" onClick={handleGooglePop}>
               <FaGoogle color="orangered" />
             </div>
           </div>
